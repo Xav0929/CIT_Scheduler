@@ -154,9 +154,9 @@ export function parseTime(t) {
   return h * 60 + m
 }
 
-/** How many 1-hour rows this entry should span */
+/** How many 1-hour rows this entry should span (+ 1 extra row below end time) */
 export function getRowspan(entry) {
   if (!entry || !entry.timeIn || !entry.timeOut) return 1
   const diff = parseTime(entry.timeOut) - parseTime(entry.timeIn)
-  return Math.max(1, Math.ceil(diff / 60))
+  return Math.max(1, Math.ceil(diff / 60)) + 1
 }
