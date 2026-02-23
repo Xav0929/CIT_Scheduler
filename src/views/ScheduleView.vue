@@ -1165,9 +1165,10 @@ function confirmLogout() {
   vertical-align: top;
   position: relative;
 }
-.td-time {
+.sched-grid td.td-time {
   background: #f8f9fa;
   text-align: center;
+  vertical-align: middle;
   font-size: 0.8rem;
   color: #1b4332;
   font-weight: 600;
@@ -1179,7 +1180,7 @@ function confirmLogout() {
   width: 100px;
   padding: 0 8px;
 }
-.td-time::after {
+.sched-grid td.td-time::after {
   content: '';
   position: absolute;
   top: 0;
