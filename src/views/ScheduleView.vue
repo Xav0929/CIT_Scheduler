@@ -50,27 +50,27 @@
         <div class="sched-topbar">
           <div class="sched-topbar-left">
             <h2 class="sched-grid-title">Teacher Schedule Grid</h2>
-            <p class="sched-grid-sub">{{ filterYear }} &mdash; {{ filterSection }}</p>
+            <p class="sched-grid-sub" style="margin:4px 0 0">Managing Schedule for {{ pages[currentPage]?.label ?? yearDropdown }}</p>
           </div>
           <div class="sched-topbar-right">
-            <!-- Year filter dropdown -->
+            <!-- Year filter selector -->
             <div class="sched-select-wrap">
-              <select class="sched-select" v-model="filterYear">
+              <select class="sched-select" :value="yearDropdown" @change="jumpToYear($event.target.value)">
                 <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
               </select>
               <svg class="sched-select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            <!-- New Schedule Week button -->
-            <button class="new-sched-btn" @click="openAddPanel">
+            <!-- New Schedule Table button -->
+            <button class="new-sched-btn" @click="showAddYearModal = true">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              New Schedule Week
+              Add Schedule Table
             </button>
-            <!-- Download -->
-            <button class="icon-btn" title="Download" @click="exportSchedule">
+            <!-- Print -->
+            <button class="icon-btn" title="Print" @click="printSchedule">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
+                <polyline points="6 9 6 2 18 2 18 9"/>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                <rect x="6" y="14" width="12" height="8"/>
               </svg>
             </button>
           </div>
@@ -80,14 +80,14 @@
         <div class="sched-pagination">
           <button class="page-arrow" @click="prevPage" :disabled="currentPage === 0">&#8249;</button>
           <span
-            v-for="(sec, i) in pages"
-            :key="i"
+            v-for="pg in filteredPages"
+            :key="pg.realIndex"
             class="page-dot"
-            :class="{ active: i === currentPage }"
-            :title="sec"
-            @click="currentPage = i"
-          ></span>
-          <button class="page-arrow" @click="nextPage" :disabled="currentPage === sections.length - 1">&#8250;</button>
+            :class="{ active: pg.realIndex === currentPage }"
+            :title="pg.label"
+            @click="currentPage = pg.realIndex"
+          >{{ pg.label }}</span>
+          <button class="page-arrow" @click="nextPage" :disabled="currentPage === pages.length - 1">&#8250;</button>
         </div>
 
         <!-- Grid -->
@@ -148,6 +148,38 @@
       </div>
     </main>
 
+    <!-- ═══ Add Year Modal ═══ -->
+    <Teleport to="body">
+      <div v-if="showAddYearModal" class="modal-overlay" @click.self="showAddYearModal = false">
+        <div class="add-year-modal-box">
+          <h2 class="sched-modal-title" style="margin-bottom:8px">Add Schedule Table</h2>
+          <p class="sched-modal-sub" style="margin-bottom:20px">Select a year level, then optionally give it a custom label.</p>
+          <div class="form-select-wrap" style="margin-bottom:14px">
+            <select v-model="newYearSelect" class="form-select" style="width:100%">
+              <option value="" disabled>Select Year</option>
+              <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+            </select>
+            <svg class="sel-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div style="margin-bottom:20px">
+            <input
+              v-model="newYearLabel"
+              class="form-select"
+              style="width:100%;box-sizing:border-box"
+              :placeholder="newYearSelect ? suggestedLabel : 'Select a year first'"
+            />
+          </div>
+          <div class="sched-modal-actions">
+            <button class="cancel-btn-text" @click="showAddYearModal = false">Cancel</button>
+            <button class="save-btn" @click="addYearPage" :disabled="!newYearSelect">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Page
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
     <!-- ═══ Add / Edit Schedule Modal ═══ -->
     <Teleport to="body">
       <div v-if="showSchedModal" class="modal-overlay" @click.self="showSchedModal = false">
@@ -204,13 +236,13 @@
                   <svg class="sel-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
               </div>
-            <!-- Year -->
+            <!-- Year / Page -->
             <div class="form-row-inline">
               <label class="form-label">Year</label>
               <div class="form-select-wrap">
                 <select v-model="form.year" class="form-select">
-                  <option value="" disabled>Select Year</option>
-                  <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+                  <option value="" disabled>Select Page</option>
+                  <option v-for="pg in pages" :key="pg.label" :value="pg.label">{{ pg.label }}</option>
                 </select>
                 <svg class="sel-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
@@ -393,13 +425,13 @@
                   <svg class="sel-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
               </div>
-              <!-- Year -->
+              <!-- Year / Page -->
               <div class="form-row-inline">
                 <label class="form-label">Year</label>
                 <div class="form-select-wrap">
                   <select v-model="addForm.year" class="form-select">
-                    <option value="" disabled>Select Year</option>
-                    <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+                    <option value="" disabled>Select Page</option>
+                    <option v-for="pg in pages" :key="pg.label" :value="pg.label">{{ pg.label }}</option>
                   </select>
                   <svg class="sel-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
@@ -565,6 +597,7 @@ import {
   teacherOptions, subjectOptions, roomOptions,
   colorForRoom, getRowspan, parseTime,
 } from '@/composables/useSchedule.js'
+import Swal from 'sweetalert2'
 
 const router = useRouter()
 const route  = useRoute()
@@ -580,34 +613,99 @@ const navItems = [
 ]
 
 /* ── Filters ── */
-const filterYear = ref('1st Year')
 
-/* ── Pagination — one page per section ── */
+/* ── Pagination — one page per year (multiples allowed) ── */
 const currentPage = ref(0)
-const pages = sections   // each dot = one section
-const filterSection = computed(() => sections[currentPage.value])
+const pages = ref([
+  { year: '1st Year', label: '1st Year' },
+  { year: '2nd Year', label: '2nd Year' },
+  { year: '3rd Year', label: '3rd Year' },
+  { year: '4th Year', label: '4th Year' },
+])
+// filterYear = current page LABEL — unique key for grid data (so "1st Year (2)" ≠ "1st Year")
+const filterYear = ref(pages.value[0].label)
+// yearDropdown = base year selected in the dropdown — used only for paginator filtering
+const yearDropdown = ref(pages.value[0].year)
+watch(currentPage, (i) => {
+  filterYear.value  = pages.value[i]?.label ?? filterYear.value
+  yearDropdown.value = pages.value[i]?.year  ?? yearDropdown.value
+})
+const filterSection = ref(sections[0])
 function prevPage() { if (currentPage.value > 0) currentPage.value-- }
-function nextPage() { if (currentPage.value < sections.length - 1) currentPage.value++ }
+function nextPage() { if (currentPage.value < pages.value.length - 1) currentPage.value++ }
+// Jump to first page matching the selected year
+function jumpToYear(year) {
+  yearDropdown.value = year
+  const idx = pages.value.findIndex(p => p.year === year)
+  if (idx >= 0) currentPage.value = idx
+}
+// Only show paginator chips for the currently-selected year
+const filteredPages = computed(() =>
+  pages.value
+    .map((pg, i) => ({ ...pg, realIndex: i }))
+    .filter(pg => pg.year === yearDropdown.value)
+)
 
-// Reset to first section when year filter changes
-watch(filterYear, () => { currentPage.value = 0 })
+// ── Add Year Modal ──
+const showAddYearModal = ref(false)
+const newYearSelect    = ref('')
+const newYearLabel     = ref('')
+const suggestedLabel   = computed(() => {
+  if (!newYearSelect.value) return ''
+  const count = pages.value.filter(p => p.year === newYearSelect.value).length
+  return count === 0 ? newYearSelect.value : `${newYearSelect.value} (${count + 1})`
+})
+function addYearPage() {
+  if (!newYearSelect.value) return
+  const label = newYearLabel.value.trim() || suggestedLabel.value
+  const newPage = { year: newYearSelect.value, label }
+  pages.value.push(newPage)
+  // Sort ascending by year order defined in `years` array
+  pages.value.sort((a, b) => years.indexOf(a.year) - years.indexOf(b.year))
+  currentPage.value = pages.value.findIndex(p => p.label === newPage.label)
+  newYearSelect.value = ''
+  newYearLabel.value  = ''
+  showAddYearModal.value = false
+}
 
-// Return entries for a given slot+day filtered by year AND current section
-// Matches entries whose timeIn falls within the row's 60-minute window
+// Return entries for a given slot+day. For parallel entries all sections
+// sharing the same parallelGroupId are returned so they render in one box.
 function getEntriesForCell(rowHour, day) {
   const rowStart = parseTime(rowHour)
   const rowEnd   = rowStart + 60
-  return Object.entries(entries)
-    .filter(([k, v]) => {
-      const parts = k.split('|')
-      if (parts.length < 4) return false
-      if (parts[0] !== filterYear.value) return false
-      if (parts[1] !== filterSection.value) return false
-      if (parts[3] !== day) return false
-      const t = parseTime(v.timeIn)
-      return t >= rowStart && t < rowEnd
-    })
-    .map(([k, v]) => ({ ...v, _key: k }))
+
+  // First, find the entry that belongs to the currently-viewed section
+  const sectionMatch = Object.entries(entries).find(([k, v]) => {
+    const parts = k.split('|')
+    if (parts.length < 4) return false
+    if (parts[0] !== filterYear.value) return false
+    if (parts[1] !== filterSection.value) return false
+    if (parts[3] !== day) return false
+    const t = parseTime(v.timeIn)
+    return t >= rowStart && t < rowEnd
+  })
+
+  if (!sectionMatch) return []
+
+  const [, matchedEntry] = sectionMatch
+
+  // If parallel, pull ALL entries with the same parallelGroupId for this year+day
+  if (matchedEntry.parallel && matchedEntry.parallelGroupId) {
+    return Object.entries(entries)
+      .filter(([k, v]) => {
+        const parts = k.split('|')
+        if (parts.length < 4) return false
+        if (parts[0] !== filterYear.value) return false
+        if (parts[3] !== day) return false
+        if (v.parallelGroupId !== matchedEntry.parallelGroupId) return false
+        const t = parseTime(v.timeIn)
+        return t >= rowStart && t < rowEnd
+      })
+      .map(([k, v]) => ({ ...v, _key: k }))
+  }
+
+  // Not parallel — just return the single section entry
+  return [{ ...matchedEntry, _key: sectionMatch[0] }]
 }
 
 /* Exact pixel height for the entry card; top offset for :30 starts (70 px = 1 hour row) */
@@ -620,7 +718,7 @@ function entryStyle(rowHour, entry) {
   const offsetMins = entryStart - rowStart
   return {
     top:    (offsetMins / 60) * ROW_HEIGHT + 3 + 'px',
-    height: (mins       / 60) * ROW_HEIGHT - 6 + 'px',
+    height: (mins       / 60) * ROW_HEIGHT + ROW_HEIGHT - 6 + 'px',
   }
 }
 
@@ -725,7 +823,7 @@ function openEditModal(slot, day, e) {
   fromButton.value       = false
   form.slot              = slot
   form.day               = day
-  form.year              = e.year ?? years[0]
+  form.year              = e.year ?? filterYear.value
   form.section           = e.section ?? sections[0]
   form.teacher           = e.teacher
   form.subject           = e.subject
@@ -750,22 +848,24 @@ function openEditModal(slot, day, e) {
   showSchedModal.value   = true
 }
 
-function checkOverlap(year, section, day, timeIn, timeOut, excludeKey = null) {
+function checkOverlap(room, day, timeIn, timeOut, excludeKey = null) {
+  if (!room) return null   // no room assigned → no room conflict possible
   const newIn  = parseTime(timeIn)
   const newOut = parseTime(timeOut)
   for (const [k, v] of Object.entries(entries)) {
     if (excludeKey && k === excludeKey) continue
+    if (v.room !== room) continue
     const parts = k.split('|')
-    if (parts[0] !== year || parts[1] !== section || parts[3] !== day) continue
+    if (parts[3] !== day) continue
     const exIn  = parseTime(v.timeIn)
     const exOut = parseTime(v.timeOut)
     if (newIn < exOut && exIn < newOut)
-      return `"${v.subject}" already occupies ${v.timeIn} – ${v.timeOut}`
+      return `Room "${room}" is already used by "${v.subject}" (${v.section}) at ${v.timeIn} – ${v.timeOut}`
   }
   return null
 }
 
-function saveEntry() {
+async function saveEntry() {
   if (!form.teacher || !form.subject) return
   form.slot = `${form.timeIn} - ${form.timeOut}`
 
@@ -776,15 +876,30 @@ function saveEntry() {
       const excludeKey = editMode.value
         ? `${form._oldYear}|${ps.section}|${form._oldSlot}|${form._oldDay}`
         : null
-      overlapMsg = overlapMsg || checkOverlap(form.year, ps.section, form.day, form.timeIn, form.timeOut, excludeKey)
+      overlapMsg = overlapMsg || checkOverlap(ps.room, form.day, form.timeIn, form.timeOut, excludeKey)
     }
   } else {
     const excludeKey = editMode.value
       ? `${form._oldYear}|${form._oldSection}|${form._oldSlot}|${form._oldDay}`
       : null
-    overlapMsg = checkOverlap(form.year, form.section, form.day, form.timeIn, form.timeOut, excludeKey)
+    overlapMsg = checkOverlap(form.room, form.day, form.timeIn, form.timeOut, excludeKey)
   }
-  if (overlapMsg) { alert(`Schedule conflict!\n${overlapMsg}`); return }
+  if (overlapMsg) {
+    await Swal.fire({
+      icon: 'error',
+      title: 'Schedule Conflict',
+      html: `<span style="font-size:0.95rem;color:#444">${overlapMsg}</span>`,
+      confirmButtonText: 'Got it',
+      confirmButtonColor: '#e63946',
+      background: '#fff',
+      customClass: {
+        popup:  'swal-cit-popup',
+        title:  'swal-cit-title',
+        confirmButton: 'swal-cit-btn',
+      },
+    })
+    return
+  }
 
   if (editMode.value) {
     if (form._parallelGroupId) {
@@ -897,19 +1012,34 @@ const addFormValid = computed(() =>
   addForm.teacher && addForm.subject && !addTimeError.value
 )
 
-function addEntry() {
+async function addEntry() {
   if (!addFormValid.value) return
   if (addForm.parallel && addForm.parallelSlots.every(ps => !ps.section)) return
 
   let overlapMsg = null
   if (addForm.parallel) {
     for (const ps of addForm.parallelSlots.filter(ps => ps.section)) {
-      overlapMsg = overlapMsg || checkOverlap(addForm.year, ps.section, addForm.day, addForm.timeIn, addForm.timeOut)
+      overlapMsg = overlapMsg || checkOverlap(ps.room, addForm.day, addForm.timeIn, addForm.timeOut)
     }
   } else {
-    overlapMsg = checkOverlap(addForm.year, addForm.section, addForm.day, addForm.timeIn, addForm.timeOut)
+    overlapMsg = checkOverlap(addForm.room, addForm.day, addForm.timeIn, addForm.timeOut)
   }
-  if (overlapMsg) { alert(`Schedule conflict!\n${overlapMsg}`); return }
+  if (overlapMsg) {
+    await Swal.fire({
+      icon: 'error',
+      title: 'Schedule Conflict',
+      html: `<span style="font-size:0.95rem;color:#444">${overlapMsg}</span>`,
+      confirmButtonText: 'Got it',
+      confirmButtonColor: '#e63946',
+      background: '#fff',
+      customClass: {
+        popup:  'swal-cit-popup',
+        title:  'swal-cit-title',
+        confirmButton: 'swal-cit-btn',
+      },
+    })
+    return
+  }
 
   const slot = `${addForm.timeIn} - ${addForm.timeOut}`
   const d = new Date()
@@ -943,23 +1073,163 @@ function addEntry() {
     }
   }
   addSavedCount.value++
-  filterYear.value = addForm.year
+  const targetIdx = pages.value.findIndex(pg => pg.label === addForm.year)
+  if (targetIdx >= 0) currentPage.value = targetIdx
   resetAddForm()
   addShowFlash.value = true
   setTimeout(() => { addShowFlash.value = false }, 2200)
 }
 
-/* ── Export ── */
-function exportSchedule() {
-  const rows = [['Year', 'Section', 'Day', 'Time In', 'Time Out', 'Teacher', 'Subject', 'Room']]
-  for (const v of Object.values(entries)) {
-    rows.push([v.year ?? '', v.section ?? '', v.day ?? '', v.timeIn, v.timeOut, v.teacher, v.subject, v.room])
+/* ── Print ── */
+function printSchedule() {
+  const DAYS  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+  const SLOTS = [
+    '7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM',
+    '12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM',
+    '5:00 PM','6:00 PM','7:00 PM',
+  ]
+
+  const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+
+  // Convert "7:30 AM" → minutes since midnight
+  function toMins(t) {
+    if (!t) return 0
+    const m = t.match(/(\d+):(\d+)\s*(AM|PM)/i)
+    if (!m) return 0
+    let h = parseInt(m[1]), min = parseInt(m[2]), period = m[3].toUpperCase()
+    if (period === 'PM' && h !== 12) h += 12
+    if (period === 'AM' && h === 12) h = 0
+    return h * 60 + min
   }
-  const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n')
-  const a = document.createElement('a')
-  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv)
-  a.download = `schedule_${filterYear.value.replace(/\s/g, '_')}.csv`
-  a.click()
+
+  const slotMins = SLOTS.map(toMins)
+
+  // All entries for the current page — match by KEY prefix (same logic as getEntriesForCell)
+  const pageEntries = Object.entries(entries)
+    .filter(([k]) => k.split('|')[0] === filterYear.value)
+    .map(([, v]) => v)
+
+  // Find ALL entries whose timeIn falls within [slotMins[si], slotMins[si+1]) for a given day
+  function entriesAt(si, day) {
+    const from = slotMins[si]
+    const to   = si + 1 < slotMins.length ? slotMins[si + 1] : from + 60
+    return pageEntries.filter(v => {
+      if (v.day !== day) return false
+      const t = toMins(v.timeIn)
+      return t >= from && t < to
+    })
+  }
+
+  // How many SLOTS rows does this entry span?
+  function rowspanFor(entry) {
+    const startMins = toMins(entry.timeIn)
+    const endMins   = toMins(entry.timeOut)
+    const si = slotMins.findIndex((m, i) => {
+      const next = i + 1 < slotMins.length ? slotMins[i + 1] : m + 60
+      return startMins >= m && startMins < next
+    })
+    if (si < 0) return 1
+    let span = 1
+    for (let i = si + 1; i < SLOTS.length; i++) {
+      if (slotMins[i] >= endMins) break
+      span++
+    }
+    return Math.max(1, span)
+  }
+
+  // Build occupied map to skip cells already covered by a rowspan
+  const occupied = Array.from({length: SLOTS.length}, () => Array(DAYS.length).fill(false))
+
+  let bodyHTML = ''
+  for (let si = 0; si < SLOTS.length; si++) {
+    bodyHTML += '<tr>'
+    bodyHTML += `<td class="time-col">${esc(SLOTS[si])}</td>`
+    for (let di = 0; di < DAYS.length; di++) {
+      if (occupied[si][di]) continue
+      const matched = entriesAt(si, DAYS[di])
+      if (matched.length > 0) {
+        // Use the first entry's span (all entries in same slot share same approximate duration)
+        const rs = rowspanFor(matched[0])
+        for (let r = 1; r < rs; r++) {
+          if (si + r < SLOTS.length) occupied[si + r][di] = true
+        }
+        const inner = matched.map(entry => `
+          <div class="entry-block">
+            <span class="e-time">${esc(entry.timeIn)} – ${esc(entry.timeOut)}</span>
+            <span class="e-section">${esc(entry.section)}</span>
+            <span class="e-teacher">${esc(entry.teacher)}</span>
+            <span class="e-subject">${esc(entry.subject)}</span>
+            <span class="e-room">${esc(entry.room)}</span>
+            ${entry.parallel ? `<span class="e-parallel">Parallel (${esc(entry.parallelCount)})</span>` : ''}
+          </div>`).join('<hr class="entry-sep">')
+        bodyHTML += `<td class="entry-cell" rowspan="${rs}">${inner}</td>`
+      } else {
+        bodyHTML += '<td class="empty-cell"></td>'
+      }
+    }
+    bodyHTML += '</tr>'
+  }
+
+  const dayHeaders = DAYS.map(d => `<th>${esc(d)}</th>`).join('')
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Schedule – ${esc(filterYear.value)}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',Arial,sans-serif;padding:20px;font-size:11px;color:#1a1a2e;}
+    h2{font-size:15px;font-weight:700;margin-bottom:3px;}
+    .sub{font-size:10px;color:#666;margin-bottom:12px;}
+    table{width:100%;border-collapse:collapse;table-layout:fixed;}
+    th{
+      background:#1a1a2e;color:#fff;padding:7px 6px;
+      text-align:center;font-size:10px;font-weight:600;letter-spacing:0.04em;
+      border:1px solid #0d0d1e;
+    }
+    th.time-hdr{width:72px;}
+    td{border:1px solid #dde;vertical-align:top;padding:0;}
+    td.time-col{
+      background:#f0f2fa;font-size:10px;font-weight:600;
+      color:#444;text-align:center;padding:5px 3px;width:72px;
+    }
+    td.empty-cell{background:#fafbff;}
+    td.entry-cell{
+      background:#eef1fb;padding:4px 5px;vertical-align:top;
+    }
+    .entry-block{padding:2px 0;}
+    .entry-sep{border:none;border-top:1px dashed #c5cadf;margin:3px 0;}
+    td.entry-cell span{display:block;line-height:1.45;}
+    .e-time{font-size:9px;color:#888;margin-bottom:2px;}
+    .e-section{font-weight:700;font-size:10px;color:#1a1a2e;}
+    .e-teacher{font-size:10px;color:#333;}
+    .e-subject{font-size:9.5px;color:#555;font-style:italic;}
+    .e-room{font-size:9.5px;color:#777;}
+    .e-parallel{font-size:9px;color:#a855f7;font-weight:600;margin-top:2px;}
+    @media print{
+      body{padding:8px;}
+      td.entry-cell{background:#e8ecf8 !important;}
+      td.empty-cell{background:#fafbff !important;}
+    }
+  </style>
+</head>
+<body>
+  <h2>Teacher Schedule – ${esc(filterYear.value)}</h2>
+  <p class="sub">Printed on ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</p>
+  <table>
+    <thead>
+      <tr><th class="time-hdr">Time</th>${dayHeaders}</tr>
+    </thead>
+    <tbody>${bodyHTML}</tbody>
+  </table>
+  <script>window.onload=()=>{window.print();window.onafterprint=()=>window.close();}<\/script>
+</body>
+</html>`
+
+  const w = window.open('', '_blank', 'width=1000,height=700')
+  w.document.write(html)
+  w.document.close()
 }
 
 /* ── Logout ── */
@@ -1066,7 +1336,7 @@ function confirmLogout() {
   margin-bottom: 16px;
   flex-wrap: wrap;
 }
-.sched-grid-title { font-size: 1.25rem; font-weight: 700; color: #111; margin: 0 0 2px; }
+.sched-grid-title { font-size: 1.65rem; font-weight: 700; color: #111; margin: 0 0 2px; }
 .sched-grid-sub   { font-size: 0.82rem; color: #888; margin: 0; }
 .sched-topbar-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
@@ -1120,12 +1390,20 @@ function confirmLogout() {
 .page-arrow:disabled { opacity: 0.3; cursor: default; }
 .page-arrow:not(:disabled):hover { color: #1b4332; }
 .page-dot {
-  width: 10px; height: 10px;
-  border-radius: 50%; background: #d0d0d0;
-  cursor: pointer; transition: background 0.2s, transform 0.15s, width 0.2s;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: #e8f0eb;
+  color: #555;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+  user-select: none;
+  line-height: 1.6;
 }
-.page-dot:hover { background: #8ab5a0; transform: scale(1.2); }
-.page-dot.active { background: #1b4332; width: 28px; border-radius: 6px; }
+.page-dot:hover { background: #c8ddd4; color: #1b4332; }
+.page-dot.active { background: #1b4332; color: #fff; border-radius: 20px; width: auto; }
 
 /* Grid */
 .sched-grid-wrap {
@@ -1206,7 +1484,6 @@ function confirmLogout() {
   top: 3px;
   left: 3px;
   right: 3px;
-  /* height is set via inline style: (duration_mins / 60) * 70px - 6px */
   border-radius: 6px;
   padding: 6px 8px;
   display: flex;
@@ -1221,17 +1498,17 @@ function confirmLogout() {
 .sched-entry:hover { filter: brightness(0.95); }
 
 .entry-teacher {
-  font-size: 0.8rem; font-weight: 700; line-height: 1.2;
+  font-size: 0.92rem; font-weight: 700; line-height: 1.2;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   padding-right: 60px;
 }
 .entry-subject {
-  font-size: 0.72rem; opacity: 0.9;
+  font-size: 0.84rem; opacity: 0.9;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   padding-right: 60px;
 }
 .entry-time-range {
-  font-size: 0.65rem; opacity: 0.75; font-style: italic; margin-top: 1px;
+  font-size: 0.76rem; opacity: 0.75; font-style: italic; margin-top: 1px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   padding-right: 60px;
 }
@@ -1245,13 +1522,13 @@ function confirmLogout() {
   display: flex; align-items: center; justify-content: space-between; gap: 4px;
 }
 .entry-section-badge {
-  font-size: 0.62rem; font-weight: 700;
+  font-size: 0.72rem; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.9;
   white-space: nowrap; flex-shrink: 0;
   background: rgba(255,255,255,0.2); padding: 1px 4px; border-radius: 3px;
 }
 .entry-room {
-  font-size: 0.68rem; opacity: 0.75;
+  font-size: 0.78rem; opacity: 0.75;
   text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: 60px;
 }
@@ -1451,6 +1728,13 @@ function confirmLogout() {
 @keyframes slideInPanel  { from { transform: translateX(100%); } to { transform: translateX(0); } }
 @keyframes slideOutPanel { from { transform: translateX(0); }    to { transform: translateX(100%); } }
 
+/* ═══ Add Year Modal ═══ */
+.add-year-modal-box {
+  background: #fff; border-radius: 20px;
+  padding: 32px 36px 28px; width: 380px; max-width: 96vw;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.18);
+}
+
 /* ═══ Logout Modal ═══ */
 .logout-modal-box {
   background: #fff; border-radius: 20px;
@@ -1480,5 +1764,30 @@ function confirmLogout() {
   font-family: inherit; font-size: 1rem; font-weight: 600;
   padding: 10px 32px; border-radius: 10px; cursor: pointer;
 }
-.logout-confirm-btn:hover { background: #2d6a4f; }
+.logout-confirm-btn:hover { background: #2d6a4f; }  
+</style>
+
+<style>
+/* ── SweetAlert2 conflict modal ── */
+.swal-cit-popup {
+  font-family: 'Poppins', sans-serif !important;
+  border-radius: 18px !important;
+  padding: 32px 28px 24px !important;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.18) !important;
+}
+.swal-cit-title {
+  font-family: 'Poppins', sans-serif !important;
+  font-size: 1.15rem !important;
+  font-weight: 700 !important;
+  color: #1a1a2e !important;
+  margin-bottom: 8px !important;
+}
+.swal-cit-btn {
+  font-family: 'Poppins', sans-serif !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+  padding: 9px 28px !important;
+  letter-spacing: 0.02em !important;
+}
 </style>
