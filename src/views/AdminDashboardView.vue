@@ -98,6 +98,8 @@
         </div>
       </header>
 
+      <!-- ── Dashboard Content ── -->
+
       <!-- Stat Cards -->
       <section class="stat-cards">
         <div class="stat-card" v-for="stat in stats" :key="stat.label">
@@ -148,6 +150,7 @@
           <div class="chart-wrap"><canvas ref="barChartRef" style="cursor:pointer"></canvas></div>
         </div>
       </section>
+
     </main>
 
     <!-- ═══ Teacher Workload Modal ═══ -->
@@ -265,6 +268,10 @@ const navItems = [
   {
     name: 'Teachers', to: '/admin/teachers',
     icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`
+  },
+  {
+    name: 'Events', to: '/admin/events',
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/><circle cx="5" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="5" cy="18" r="1" fill="currentColor" stroke="none"/></svg>`
   },
   {
     name: 'Manage Users', to: '/admin/users',
@@ -528,6 +535,8 @@ function confirmLogout() {
   logout()
   router.push('/')
 }
+
+
 </script>
 
 <style scoped>
@@ -1117,4 +1126,5 @@ function confirmLogout() {
   .stat-cards { grid-template-columns: repeat(2, 1fr); }
   .sidebar { width: 200px; min-width: 200px; }
 }
+
 </style>

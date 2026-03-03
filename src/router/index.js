@@ -4,7 +4,10 @@ import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
 import LoginView from '@/views/LoginView.vue'
 import NewScheduleWeekView from '@/views/NewScheduleWeekView.vue'
 import ScheduleView from '@/views/ScheduleView.vue'
+import EventsView from '@/views/EventsView.vue'
 import TeacherAssignmentsView from '@/views/TeacherAssignmentsView.vue'
+import UserManagementView from '@/views/UserManagementView.vue'
+import SettingsView from '@/views/SettingsView.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
@@ -16,6 +19,9 @@ const router = createRouter({
     { path: '/admin/schedule', name: 'admin-schedule', component: ScheduleView, meta: { requiresAuth: true } },
     { path: '/admin/schedule/new-week', name: 'new-schedule-week', component: NewScheduleWeekView, meta: { requiresAuth: true } },
     { path: '/admin/teachers', name: 'admin-teachers', component: TeacherAssignmentsView, meta: { requiresAuth: true } },
+    { path: '/admin/events', name: 'admin-events', component: EventsView, meta: { requiresAuth: true } },
+    { path: '/admin/users', name: 'admin-users', component: UserManagementView, meta: { requiresAuth: true } },
+    { path: '/admin/settings', name: 'admin-settings', component: SettingsView, meta: { requiresAuth: true } },
   ]
 })
 

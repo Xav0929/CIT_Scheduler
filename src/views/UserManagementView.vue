@@ -1,0 +1,1330 @@
+<template>
+  <div class="layout">
+    <!-- ═══════════════════ SIDEBAR ═══════════════════ -->
+    <aside class="sidebar">
+      <div class="sidebar-profile">
+        <div class="avatar-wrap">
+          <img src="https://i.pravatar.cc/100?img=15" alt="Admin" class="avatar" />
+        </div>
+        <div class="brand">CIT Scheduler</div>
+        <div class="role">Admin Portal</div>
+        <div class="email">admin@gmail.com</div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <RouterLink
+          v-for="item in navItems"
+          :key="item.name"
+          :to="item.to"
+          class="nav-item"
+          :class="{ active: currentRoute === item.to }"
+        >
+          <span class="nav-icon" v-html="item.icon"></span>
+          <span>{{ item.name }}</span>
+        </RouterLink>
+      </nav>
+
+      <button class="logout-btn" @click="showLogoutModal = true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+          <polyline points="16 17 21 12 16 7" />
+          <line x1="21" y1="12" x2="9" y2="12" />
+        </svg>
+        Logout
+      </button>
+    </aside>
+
+    <!-- ═══════════════════ MAIN ═══════════════════ -->
+    <main class="main">
+      <!-- Header -->
+      <header class="main-header">
+        <div>
+          <h1 class="page-title">Manage Users</h1>
+          <p class="page-sub">Add, edit, and manage system user accounts</p>
+        </div>
+      </header>
+
+      <!-- Top bar -->
+      <div class="um-topbar">
+        <div class="um-search-wrap">
+          <span class="um-search-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </span>
+          <input v-model="searchQuery" class="um-search-input" type="text" placeholder="Search users…" />
+        </div>
+        <div class="um-topbar-right">
+          <select v-model="roleFilter" class="um-filter-select">
+            <option value="">All Roles</option>
+            <option value="Admin">Admin</option>
+            <option value="Teacher">Teacher</option>
+            <option value="Student">Student</option>
+          </select>
+          <button class="um-add-btn" @click="openAddUser">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add User
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats row -->
+      <div class="um-stats-row">
+        <div class="um-stat-card">
+          <div class="um-stat-icon um-stat-icon--total">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div class="um-stat-info">
+            <div class="um-stat-val">{{ users.length }}</div>
+            <div class="um-stat-label">Total Users</div>
+          </div>
+        </div>
+        <div class="um-stat-card">
+          <div class="um-stat-icon um-stat-icon--admin">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div class="um-stat-info">
+            <div class="um-stat-val">{{ users.filter(u => u.role === 'Admin').length }}</div>
+            <div class="um-stat-label">Admins</div>
+          </div>
+        </div>
+        <div class="um-stat-card">
+          <div class="um-stat-icon um-stat-icon--teacher">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          </div>
+          <div class="um-stat-info">
+            <div class="um-stat-val">{{ users.filter(u => u.role === 'Teacher').length }}</div>
+            <div class="um-stat-label">Teachers</div>
+          </div>
+        </div>
+        <div class="um-stat-card">
+          <div class="um-stat-icon um-stat-icon--active">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="um-stat-info">
+            <div class="um-stat-val">{{ users.filter(u => u.status === 'Active').length }}</div>
+            <div class="um-stat-label">Active</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="um-table-wrap">
+        <table class="um-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Date Added</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="user in filteredUsers" :key="user.id" class="um-row">
+              <td>
+                <div class="um-user-cell">
+                  <img :src="user.avatar" class="um-user-avatar" alt="" />
+                  <div class="um-user-info">
+                    <span class="um-user-name">{{ user.name }}</span>
+                    <span class="um-user-dept">{{ user.department }}</span>
+                  </div>
+                </div>
+              </td>
+              <td class="um-email">{{ user.email }}</td>
+              <td>
+                <span :class="['um-role-badge', `um-role-badge--${user.role.toLowerCase()}`]">{{ user.role }}</span>
+              </td>
+              <td>
+                <span :class="['um-status-badge', user.status === 'Active' ? 'um-status--active' : 'um-status--inactive']">
+                  <span class="um-status-dot"></span>
+                  {{ user.status }}
+                </span>
+              </td>
+              <td class="um-date">{{ user.dateAdded }}</td>
+              <td>
+                <div class="um-actions">
+                  <button class="um-btn um-btn--edit" @click="openEditUser(user)" title="Edit">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Edit
+                  </button>
+                  <button class="um-btn um-btn--reset" @click="openResetPassword(user)" title="Reset Password">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Reset
+                  </button>
+                  <button class="um-btn um-btn--delete" @click="openDeleteUser(user)" title="Delete">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                    Delete
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="filteredUsers.length === 0">
+              <td colspan="6">
+                <div class="um-empty">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  <span>No users found</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- ═══ Add / Edit User Modal ═══ -->
+  <Teleport to="body">
+    <div v-if="showUserModal" class="modal-overlay" @click.self="showUserModal = false">
+      <div class="um-modal-box um-modal-box--wide">
+        <!-- Banner -->
+        <div class="um-modal-banner">
+          <div class="um-modal-banner-icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+          </div>
+          <div class="um-modal-banner-text">
+            <p class="um-modal-banner-title">{{ editingUser ? 'Edit User' : 'Register New User' }}</p>
+            <p class="um-modal-banner-sub">{{ editingUser ? 'Update user account details' : 'Fill in the details to create a new account' }}</p>
+          </div>
+          <button class="um-modal-close" @click="showUserModal = false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <form class="um-form" @submit.prevent="saveUser">
+
+          <!-- Avatar row -->
+          <div class="reg-avatar-row">
+            <div class="reg-avatar-wrap">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <div class="reg-avatar-hint">
+              <p class="reg-avatar-name">{{ userForm.firstName || userForm.lastName ? (userForm.firstName + ' ' + userForm.lastName).trim() : 'New User' }}</p>
+              <p class="reg-avatar-role">{{ userForm.role || 'No role selected' }}</p>
+            </div>
+          </div>
+
+          <!-- ── Section: Personal Info ── -->
+          <div class="reg-section-title">
+            <span class="reg-section-line"></span>
+            <span class="reg-section-label">Personal Information</span>
+            <span class="reg-section-line"></span>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">First Name <span class="form-required">*</span></label>
+              <input v-model="userForm.firstName" class="form-input" type="text" placeholder="e.g. Juan" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Last Name <span class="form-required">*</span></label>
+              <input v-model="userForm.lastName" class="form-input" type="text" placeholder="e.g. Dela Cruz" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Email Address <span class="form-required">*</span></label>
+              <input v-model="userForm.email" class="form-input" type="email" placeholder="e.g. juan@cit.edu" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Phone Number</label>
+              <input v-model="userForm.phone" class="form-input" type="tel" placeholder="e.g. 09xx xxx xxxx" />
+            </div>
+          </div>
+
+          <!-- ── Section: Account Details ── -->
+          <div class="reg-section-title">
+            <span class="reg-section-line"></span>
+            <span class="reg-section-label">Account Details</span>
+            <span class="reg-section-line"></span>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Role <span class="form-required">*</span></label>
+              <select v-model="userForm.role" class="form-input" required>
+                <option value="" disabled>Select role…</option>
+                <option value="Admin">Admin</option>
+                <option value="Teacher">Teacher</option>
+                <option value="Student">Student</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">{{ userForm.role === 'Student' ? 'Course / Program' : 'Department' }}</label>
+              <input v-model="userForm.department" class="form-input" type="text" :placeholder="userForm.role === 'Student' ? 'e.g. BS Computer Science' : 'e.g. CIT Department'" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div v-if="userForm.role === 'Student'" class="form-group">
+              <label class="form-label">Student ID</label>
+              <input v-model="userForm.studentId" class="form-input" type="text" placeholder="e.g. 2024-00001" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Status</label>
+              <select v-model="userForm.status" class="form-input">
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- ── Section: Credentials (Add only) ── -->
+          <template v-if="!editingUser">
+            <div class="reg-section-title">
+              <span class="reg-section-line"></span>
+              <span class="reg-section-label">Set Password</span>
+              <span class="reg-section-line"></span>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Password <span class="form-required">*</span></label>
+                <input v-model="userForm.password" class="form-input" type="password" placeholder="Min. 6 characters" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Confirm Password <span class="form-required">*</span></label>
+                <input v-model="userForm.confirmPassword" class="form-input" type="password" placeholder="Re-enter password" required />
+              </div>
+            </div>
+            <div v-if="regPasswordError" class="um-pw-error">{{ regPasswordError }}</div>
+          </template>
+
+          <div class="form-actions">
+            <button type="button" class="um-cancel-btn" @click="showUserModal = false">Cancel</button>
+            <button type="submit" class="um-submit-btn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              {{ editingUser ? 'Save Changes' : 'Register User' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </Teleport>
+
+  <!-- ═══ Reset Password Modal ═══ -->
+  <Teleport to="body">
+    <div v-if="showResetModal" class="modal-overlay" @click.self="showResetModal = false">
+      <div class="um-modal-box">
+        <div class="um-modal-banner um-modal-banner--warning">
+          <div class="um-modal-banner-icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div class="um-modal-banner-text">
+            <p class="um-modal-banner-title">Reset Password</p>
+            <p class="um-modal-banner-sub">Set a new password for {{ resetTarget?.name }}</p>
+          </div>
+          <button class="um-modal-close" @click="showResetModal = false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <form class="um-form" @submit.prevent="confirmResetPassword">
+          <div class="form-group">
+            <label class="form-label">New Password <span class="form-required">*</span></label>
+            <input v-model="newPassword" class="form-input" type="password" placeholder="Enter new password" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm Password <span class="form-required">*</span></label>
+            <input v-model="confirmPassword" class="form-input" type="password" placeholder="Confirm new password" required />
+          </div>
+          <div v-if="passwordError" class="um-pw-error">{{ passwordError }}</div>
+          <div class="form-actions">
+            <button type="button" class="um-cancel-btn" @click="showResetModal = false">Cancel</button>
+            <button type="submit" class="um-submit-btn">Reset Password</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </Teleport>
+
+  <!-- ═══ Delete Confirm Modal ═══ -->
+  <Teleport to="body">
+    <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
+      <div class="um-delete-box">
+        <div class="um-delete-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#e63946" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </div>
+        <h2 class="um-delete-title">Delete User?</h2>
+        <p class="um-delete-sub">This will permanently remove <strong>{{ deleteTarget?.name }}</strong>. This action cannot be undone.</p>
+        <div class="um-delete-actions">
+          <button class="um-cancel-btn" @click="showDeleteModal = false">Cancel</button>
+          <button class="um-delete-confirm-btn" @click="confirmDeleteUser">Delete</button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
+  <!-- ═══ Sweet Alert — Register Confirm ═══ -->
+  <Teleport to="body">
+    <div v-if="showRegisterConfirm" class="modal-overlay">
+      <div class="swal-box">
+        <p class="swal-text">Are you sure you want to continue?</p>
+        <div class="swal-actions">
+          <button class="swal-cancel" @click="showRegisterConfirm = false">Cancel</button>
+          <button class="swal-continue" @click="confirmSaveUser">Continue</button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
+  <!-- ═══ Logout Confirm Modal ═══ -->
+  <Teleport to="body">
+    <div v-if="showLogoutModal" class="modal-overlay" @click.self="showLogoutModal = false">
+      <div class="logout-modal-box">
+        <div class="logout-modal-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#e63946" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+        </div>
+        <h2 class="logout-modal-title">Log out?</h2>
+        <p class="logout-modal-sub">You will be returned to the login page.</p>
+        <div class="logout-modal-actions">
+          <button class="logout-cancel-btn" @click="showLogoutModal = false">Cancel</button>
+          <button class="logout-confirm-btn" @click="confirmLogout">Log out</button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue'
+import { RouterLink, useRouter, useRoute } from 'vue-router'
+import { logout } from '@/auth.js'
+
+const router = useRouter()
+const route  = useRoute()
+const currentRoute = computed(() => route.path)
+
+/* ── Nav ── */
+const navItems = [
+  {
+    name: 'Dashboard', to: '/admin/dashboard',
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`
+  },
+  {
+    name: 'Schedule', to: '/admin/schedule',
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`
+  },
+  {
+    name: 'Teachers', to: '/admin/teachers',
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`
+  },
+  {
+    name: 'Events', to: '/admin/events',
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/><circle cx="5" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="5" cy="18" r="1" fill="currentColor" stroke="none"/></svg>`
+  },
+  {
+    name: 'Manage Users', to: '/admin/users',
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>`
+  },
+  {
+    name: 'Settings', to: '/admin/settings',
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`
+  }
+]
+
+/* ── Logout ── */
+const showLogoutModal = ref(false)
+function confirmLogout() {
+  showLogoutModal.value = false
+  logout()
+  router.push('/')
+}
+
+/* ── Search & Filter ── */
+const searchQuery = ref('')
+const roleFilter  = ref('')
+
+/* ── Users Data ── */
+const users = ref([
+  { id: 1, name: 'Maria Santos',   email: 'maria.santos@cit.edu',   role: 'Admin',   department: 'CIT Department',    status: 'Active',   dateAdded: 'Jan 10, 2025', avatar: 'https://i.pravatar.cc/100?img=5'  },
+  { id: 2, name: 'Juan Dela Cruz', email: 'juan.delacruz@cit.edu',  role: 'Teacher', department: 'Computer Science',  status: 'Active',   dateAdded: 'Feb 3, 2025',  avatar: 'https://i.pravatar.cc/100?img=12' },
+  { id: 3, name: 'Ana Reyes',      email: 'ana.reyes@cit.edu',      role: 'Teacher', department: 'Information Tech.',  status: 'Active',   dateAdded: 'Feb 14, 2025', avatar: 'https://i.pravatar.cc/100?img=9'  },
+  { id: 4, name: 'Carlo Lim',      email: 'carlo.lim@cit.edu',      role: 'Student', department: 'Computer Science',   status: 'Inactive', dateAdded: 'Mar 1, 2025',  avatar: 'https://i.pravatar.cc/100?img=15' },
+  { id: 5, name: 'Rosa Mendoza',   email: 'rosa.mendoza@cit.edu',   role: 'Teacher', department: 'Computer Science',  status: 'Active',   dateAdded: 'Mar 22, 2025', avatar: 'https://i.pravatar.cc/100?img=20' },
+  { id: 6, name: 'Ben Torres',     email: 'ben.torres@cit.edu',     role: 'Admin',   department: 'CIT Department',    status: 'Active',   dateAdded: 'Apr 5, 2025',  avatar: 'https://i.pravatar.cc/100?img=33' },
+])
+
+const filteredUsers = computed(() => {
+  return users.value.filter(u => {
+    const matchSearch = searchQuery.value === '' ||
+      u.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      u.department.toLowerCase().includes(searchQuery.value.toLowerCase())
+    const matchRole = roleFilter.value === '' || u.role === roleFilter.value
+    return matchSearch && matchRole
+  })
+})
+
+/* ── Add / Edit User ── */
+const showUserModal   = ref(false)
+const editingUser     = ref(null)
+const regPasswordError   = ref('')
+const showRegisterConfirm = ref(false)
+const emptyForm = () => ({ firstName: '', lastName: '', email: '', phone: '', role: '', department: '', studentId: '', status: 'Active', password: '', confirmPassword: '' })
+const userForm  = ref(emptyForm())
+
+function openAddUser() {
+  editingUser.value     = null
+  regPasswordError.value = ''
+  userForm.value        = emptyForm()
+  showUserModal.value   = true
+}
+
+function openEditUser(user) {
+  editingUser.value     = user
+  regPasswordError.value = ''
+  const parts = (user.name || '').split(' ')
+  userForm.value = {
+    firstName: parts[0] || '',
+    lastName:  parts.slice(1).join(' ') || '',
+    email:      user.email,
+    phone:      user.phone || '',
+    role:       user.role,
+    department: user.department,
+    studentId:  user.studentId || '',
+    status:     user.status,
+    password:   '',
+    confirmPassword: '',
+  }
+  showUserModal.value = true
+}
+
+function saveUser() {
+  if (!editingUser.value) {
+    if (userForm.value.password !== userForm.value.confirmPassword) {
+      regPasswordError.value = 'Passwords do not match.'
+      return
+    }
+    if (userForm.value.password.length < 6) {
+      regPasswordError.value = 'Password must be at least 6 characters.'
+      return
+    }
+  }
+  regPasswordError.value = ''
+  // Show sweet alert confirm before committing
+  showRegisterConfirm.value = true
+}
+
+function confirmSaveUser() {
+  showRegisterConfirm.value = false
+  const fullName = (userForm.value.firstName + ' ' + userForm.value.lastName).trim()
+  if (editingUser.value) {
+    const idx = users.value.findIndex(u => u.id === editingUser.value.id)
+    if (idx !== -1) {
+      users.value[idx] = {
+        ...users.value[idx],
+        name:       fullName,
+        email:      userForm.value.email,
+        phone:      userForm.value.phone,
+        role:       userForm.value.role,
+        department: userForm.value.department,
+        studentId:  userForm.value.studentId,
+        status:     userForm.value.status,
+      }
+    }
+  } else {
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    users.value.push({
+      id:         Date.now(),
+      name:       fullName,
+      email:      userForm.value.email,
+      phone:      userForm.value.phone,
+      role:       userForm.value.role,
+      department: userForm.value.department,
+      studentId:  userForm.value.studentId,
+      status:     userForm.value.status,
+      dateAdded:  today,
+      avatar:     `https://i.pravatar.cc/100?img=${Math.floor(Math.random() * 70) + 1}`,
+    })
+  }
+  showUserModal.value = false
+}
+
+/* ── Reset Password ── */
+const showResetModal  = ref(false)
+const resetTarget     = ref(null)
+const newPassword     = ref('')
+const confirmPassword  = ref('')
+const passwordError   = ref('')
+
+function openResetPassword(user) {
+  resetTarget.value    = user
+  newPassword.value    = ''
+  confirmPassword.value = ''
+  passwordError.value  = ''
+  showResetModal.value = true
+}
+
+function confirmResetPassword() {
+  if (newPassword.value !== confirmPassword.value) {
+    passwordError.value = 'Passwords do not match.'
+    return
+  }
+  if (newPassword.value.length < 6) {
+    passwordError.value = 'Password must be at least 6 characters.'
+    return
+  }
+  // In a real app: call API here
+  showResetModal.value = false
+}
+
+/* ── Delete User ── */
+const showDeleteModal = ref(false)
+const deleteTarget    = ref(null)
+
+function openDeleteUser(user) {
+  deleteTarget.value    = user
+  showDeleteModal.value = true
+}
+
+function confirmDeleteUser() {
+  users.value = users.value.filter(u => u.id !== deleteTarget.value.id)
+  showDeleteModal.value = false
+}
+</script>
+
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+
+.layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: #f5f6f8;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 280px;
+  min-width: 280px;
+  background: #fff;
+  border-right: 1px solid #ececec;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 18px 24px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+.sidebar-profile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 28px;
+  text-align: center;
+}
+.avatar-wrap {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-bottom: 10px;
+  border: 3px solid #c8ddd4;
+}
+.avatar { width: 100%; height: 100%; object-fit: cover; }
+.brand  { font-size: 1.05rem; font-weight: 600; color: #1b4332; }
+.role   { font-size: 0.88rem; color: #444; font-weight: 500; }
+.email  { font-size: 0.82rem; color: #888; word-break: break-all; }
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  flex: 1;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 400;
+  color: #444;
+  text-decoration: none;
+  transition: background 0.18s, color 0.18s;
+  cursor: pointer;
+}
+.nav-item:hover  { background: #f0faf3; color: #1b4332; }
+.nav-item.active { background: #1b4332; color: #fff; }
+.nav-item.active .nav-icon { color: #fff; }
+.nav-icon { display: flex; align-items: center; flex-shrink: 0; }
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 12px;
+  background: #e63946;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 16px;
+}
+.logout-btn:hover { background: #c1121f; }
+
+/* ── Main ── */
+.main {
+  flex: 1;
+  padding: 40px 44px 32px;
+  overflow-y: auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+.main-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+.page-title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #1b4332;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+.page-sub {
+  font-size: 0.95rem;
+  color: #777;
+  margin-top: 4px;
+}
+
+/* ── Topbar ── */
+.um-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.um-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.um-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.um-search-icon {
+  position: absolute;
+  left: 13px;
+  color: #aaa;
+  pointer-events: none;
+  display: flex;
+}
+.um-search-input {
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: #111;
+  background: #fff;
+  border: 1.5px solid #e8e8e8;
+  border-radius: 10px;
+  padding: 10px 14px 10px 38px;
+  outline: none;
+  width: 280px;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+.um-search-input:focus {
+  border-color: #2d6a4f;
+  box-shadow: 0 0 0 3px rgba(45,106,79,0.09);
+}
+.um-filter-select {
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: #555;
+  background: #fff;
+  border: 1.5px solid #e8e8e8;
+  border-radius: 10px;
+  padding: 10px 14px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.18s;
+}
+.um-filter-select:focus { border-color: #2d6a4f; }
+.um-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #1b4332;
+  color: #fff;
+  border: none;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.um-add-btn:hover { background: #2d6a4f; }
+
+/* ── Stats Row ── */
+.um-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.um-stat-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.um-stat-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.um-stat-icon--total   { background: #e8f5ee; color: #1b7a4a; }
+.um-stat-icon--admin   { background: #e8eefe; color: #2563eb; }
+.um-stat-icon--teacher { background: #fef3c7; color: #b45309; }
+.um-stat-icon--active  { background: #d8f3e8; color: #1b7a4a; }
+.um-stat-val   { font-size: 1.6rem; font-weight: 800; color: #111; line-height: 1; }
+.um-stat-label { font-size: 0.78rem; color: #888; font-weight: 500; margin-top: 3px; }
+
+/* ── Table ── */
+.um-table-wrap {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+  overflow: hidden;
+}
+.um-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.um-table thead tr {
+  background: #f7f8fa;
+  border-bottom: 1.5px solid #efefef;
+}
+.um-table th {
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 14px 20px;
+}
+.um-row {
+  border-bottom: 1px solid #f4f4f4;
+  transition: background 0.15s;
+}
+.um-row:last-child { border-bottom: none; }
+.um-row:hover { background: #f9fbfa; }
+.um-table td { padding: 14px 20px; vertical-align: middle; }
+
+.um-user-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.um-user-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.um-user-name  { display: block; font-weight: 600; color: #111; }
+.um-user-dept  { display: block; font-size: 0.75rem; color: #999; margin-top: 2px; }
+.um-email { color: #555; }
+.um-date  { color: #999; font-size: 0.82rem; }
+
+.um-role-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 12px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.um-role-badge--admin   { background: #e8eefe; color: #2563eb; }
+.um-role-badge--teacher { background: #fef3c7; color: #b45309; }
+.um-role-badge--student { background: #f0e8fe; color: #7c3aed; }
+
+.um-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+.um-status--active   { background: #d8f3e8; color: #1b7a4a; }
+.um-status--inactive { background: #f5f5f5; color: #999; }
+.um-status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.um-actions { display: flex; gap: 6px; }
+.um-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: inherit;
+  font-size: 0.77rem;
+  font-weight: 500;
+  padding: 5px 11px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.um-btn--edit   { background: #eef4fe; color: #2563eb; }
+.um-btn--edit:hover { background: #dceafd; }
+.um-btn--reset  { background: #fef3c7; color: #b45309; }
+.um-btn--reset:hover { background: #fde68a; }
+.um-btn--delete { background: #ffeaea; color: #e63946; }
+.um-btn--delete:hover { background: #fdd; }
+
+.um-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 20px;
+  color: #bbb;
+  font-size: 0.88rem;
+}
+
+/* ── Modal overlay ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* ── User / Reset Modal ── */
+.um-modal-box {
+  background: #fff;
+  border-radius: 20px;
+  width: 560px;
+  max-width: 95vw;
+}
+.um-modal-box--wide {
+  width: 660px;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  position: relative;
+  animation: modalIn 0.22s cubic-bezier(0.34,1.3,0.64,1);
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.94) translateY(12px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0); }
+}
+.um-modal-banner {
+  background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%);
+  padding: 26px 28px 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-radius: 20px 20px 0 0;
+  position: relative;
+}
+.um-modal-banner--warning {
+  background: linear-gradient(135deg, #92400e 0%, #b45309 100%);
+}
+.um-modal-banner-icon {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.um-modal-banner-text { flex: 1; }
+.um-modal-banner-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 4px;
+  line-height: 1.2;
+}
+.um-modal-banner-sub {
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.72);
+  margin: 0;
+}
+.um-modal-close {
+  position: absolute;
+  top: 16px; right: 18px;
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.um-modal-close:hover { background: rgba(255,255,255,0.28); }
+
+.um-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 26px 28px 28px;
+}
+.form-group { display: flex; flex-direction: column; gap: 7px; }
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.form-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #666;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.form-required { color: #e63946; }
+.form-input {
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: #111;
+  background: #f7f8fa;
+  border: 1.5px solid #ececec;
+  border-radius: 10px;
+  padding: 11px 14px;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+}
+.form-input::placeholder { color: #c0c4cc; }
+.form-input:focus {
+  border-color: #2d6a4f;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(45,106,79,0.09);
+}
+.um-pw-error {
+  font-size: 0.82rem;
+  color: #e63946;
+  background: #ffeaea;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: 500;
+}
+
+/* ── Registration form extras ── */
+.reg-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #f7faf8;
+  border: 1.5px dashed #c8ddd4;
+  border-radius: 14px;
+  padding: 14px 18px;
+  margin-bottom: 4px;
+}
+.reg-avatar-wrap {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #e8f0ec;
+  border: 2px solid #c8ddd4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.reg-avatar-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1b4332;
+  margin: 0 0 2px;
+}
+.reg-avatar-role {
+  font-size: 0.78rem;
+  color: #888;
+  margin: 0;
+}
+.reg-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0 2px;
+}
+.reg-section-line {
+  flex: 1;
+  height: 1px;
+  background: #ececec;
+}
+.reg-section-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  white-space: nowrap;
+}
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+  margin-top: 2px;
+}
+.um-cancel-btn {
+  background: none;
+  border: 1.5px solid #e0e0e0;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  padding: 10px 22px;
+  border-radius: 10px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.um-cancel-btn:hover { background: #f5f5f5; border-color: #ccc; }
+.um-submit-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%);
+  color: #fff;
+  border: none;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 10px 26px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: opacity 0.18s, box-shadow 0.18s;
+  box-shadow: 0 4px 14px rgba(27,67,50,0.25);
+}
+.um-submit-btn:hover { opacity: 0.9; box-shadow: 0 6px 18px rgba(27,67,50,0.32); }
+
+/* ── Delete Modal ── */
+.um-delete-box {
+  background: #fff;
+  border-radius: 20px;
+  padding: 36px 40px 32px;
+  width: 380px;
+  max-width: 94vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.18);
+  text-align: center;
+  animation: modalIn 0.22s cubic-bezier(0.34,1.3,0.64,1);
+}
+.um-delete-icon {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: #ffeaea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.um-delete-title { font-size: 1.4rem; font-weight: 700; color: #111; margin: 0; }
+.um-delete-sub   { font-size: 0.88rem; color: #777; margin: 0 0 8px; line-height: 1.6; }
+.um-delete-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 6px;
+  width: 100%;
+}
+.um-delete-confirm-btn {
+  background: #e63946;
+  color: #fff;
+  border: none;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 10px 32px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.um-delete-confirm-btn:hover { background: #c1121f; }
+
+/* ── Sweet Alert ── */
+.swal-box {
+  background: #fff;
+  border-radius: 18px;
+  padding: 40px 44px 32px;
+  width: 420px;
+  max-width: 92vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  animation: modalIn 0.22s cubic-bezier(0.34,1.3,0.64,1);
+}
+.swal-text {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #111;
+  text-align: center;
+  line-height: 1.5;
+  margin: 0;
+}
+.swal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  width: 100%;
+}
+.swal-cancel {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e63946;
+  cursor: pointer;
+  padding: 10px 28px;
+  border-radius: 10px;
+  transition: background 0.15s;
+}
+.swal-cancel:hover { background: #ffeaea; }
+.swal-continue {
+  background: #1b4332;
+  color: #fff;
+  border: none;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 11px 36px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.18s;
+  box-shadow: 0 4px 14px rgba(27,67,50,0.22);
+}
+.swal-continue:hover { background: #2d6a4f; }
+
+/* ── Logout Modal ── */
+.logout-modal-box {
+  background: #fff;
+  border-radius: 20px;
+  padding: 36px 40px 32px;
+  width: 360px;
+  max-width: 94vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.18);
+  text-align: center;
+  animation: modalIn 0.22s cubic-bezier(0.34,1.3,0.64,1);
+}
+.logout-modal-icon {
+  width: 68px; height: 68px;
+  border-radius: 50%;
+  background: #ffeaea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.logout-modal-title { font-size: 1.45rem; font-weight: 700; color: #111; margin: 0; }
+.logout-modal-sub   { font-size: 0.9rem; color: #777; margin: 0 0 8px; }
+.logout-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 6px;
+  width: 100%;
+}
+.logout-cancel-btn {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e63946;
+  cursor: pointer;
+  padding: 8px 18px;
+  border-radius: 10px;
+  transition: background 0.15s;
+}
+.logout-cancel-btn:hover { background: #ffeaea; }
+.logout-confirm-btn {
+  background: #1b4332;
+  color: #fff;
+  border: none;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 10px 32px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.logout-confirm-btn:hover { background: #2d6a4f; }
+
+/* ── Responsive ── */
+@media (max-width: 1100px) {
+  .um-stats-row { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 900px) {
+  .main { padding: 20px 16px 32px; }
+}
+@media (max-width: 700px) {
+  .um-stats-row { grid-template-columns: 1fr 1fr; }
+  .um-table th:nth-child(4),
+  .um-table td:nth-child(4),
+  .um-table th:nth-child(5),
+  .um-table td:nth-child(5) { display: none; }
+}
+@media (max-width: 600px) {
+  .sidebar { width: 240px; min-width: 240px; }
+  .form-row { grid-template-columns: 1fr; }
+}
+</style>
